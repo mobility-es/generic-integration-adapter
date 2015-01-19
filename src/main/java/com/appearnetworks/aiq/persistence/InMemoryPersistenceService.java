@@ -27,31 +27,31 @@ public class InMemoryPersistenceService implements PersistenceService {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private final ConcurrentMap<String, Document> documents = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, StoredDocument> documents = new ConcurrentHashMap<>();
 
     @Override
     public Collection<DocumentReference> list() {
         ArrayList<DocumentReference> documentReferences = new ArrayList<>(documents.size());
-        for (Document document : documents.values()) {
-            documentReferences.add(new DocumentReference(document));
+        for (StoredDocument document : documents.values()) {
+            documentReferences.add(new DocumentReference(document._id, document._type, document.get_rev()));
         }
         return documentReferences;
     }
 
     @Override
     public ObjectNode retrieve(String docId) {
-        Document doc = documents.get(docId);
+        StoredDocument doc = documents.get(docId);
         if (doc == null) return null;
 
         ObjectNode attachments = mapper.createObjectNode();
         for (Map.Entry<String, StoredAttachment> entry : doc.attachments.entrySet()) {
-            attachments.put(entry.getKey(), mapper.valueToTree(new AttachmentReference(entry.getValue().getRevision(), entry.getValue().getContentType())));
+            attachments.put(entry.getKey(), mapper.valueToTree(new AttachmentReference(entry.getValue().revision, entry.getValue().contentType)));
         }
         if (attachments.size() > 0) {
-            doc.getBody().put(ATTACHMENTS, attachments);
+            doc.body.put(ATTACHMENTS, attachments);
         }
 
-        return doc.getBody();
+        return doc.body;
     }
 
     @Override
@@ -60,9 +60,9 @@ public class InMemoryPersistenceService implements PersistenceService {
 
         body.put(REV, initialRevision);
 
-        Document existingDocument = documents.putIfAbsent(
+        StoredDocument existingDocument = documents.putIfAbsent(
             docRef._id,
-            new Document(docRef._id, docRef._type, initialRevision, body));
+            new StoredDocument(docRef._id, docRef._type, initialRevision, body));
 
         if (existingDocument == null) {
             return initialRevision;
@@ -79,8 +79,8 @@ public class InMemoryPersistenceService implements PersistenceService {
 
         boolean wasReplaced = documents.replace(
             docRef._id,
-            new Document(docRef._id, docRef._type, docRef._rev, null),
-            new Document(docRef._id, docRef._type, updatedRevision, body));
+            new StoredDocument(docRef._id, docRef._type, docRef._rev, null),
+            new StoredDocument(docRef._id, docRef._type, updatedRevision, body));
 
         if (wasReplaced)
             return updatedRevision;
@@ -92,7 +92,7 @@ public class InMemoryPersistenceService implements PersistenceService {
     public void delete(DocumentReference docRef) throws UpdateException {
         boolean wasRemoved = documents.remove(
             docRef._id,
-            new Document(docRef._id, docRef._type, docRef._rev, null));
+            new StoredDocument(docRef._id, docRef._type, docRef._rev, null));
 
         if (wasRemoved)
             return;
@@ -102,7 +102,7 @@ public class InMemoryPersistenceService implements PersistenceService {
 
     @Override
     public DocumentAndAttachmentRevision insertAttachment(String docId, String name, InputStream data, MediaType contentType, long contentLength) throws UpdateException, IOException {
-        Document document = documents.get(docId);
+        StoredDocument document = documents.get(docId);
         if (document == null) {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {
@@ -121,7 +121,7 @@ public class InMemoryPersistenceService implements PersistenceService {
 
     @Override
     public DocumentAndAttachmentRevision updateAttachment(String docId, String name, InputStream data, long revision, MediaType contentType, long contentLength) throws UpdateException, IOException {
-        Document document = documents.get(docId);
+        StoredDocument document = documents.get(docId);
         if (document == null) {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {
@@ -140,7 +140,7 @@ public class InMemoryPersistenceService implements PersistenceService {
 
     @Override
     public long deleteAttachment(String docId, String name, long revision) throws UpdateException {
-        Document document = documents.get(docId);
+        StoredDocument document = documents.get(docId);
         if (document == null) {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {

@@ -3,26 +3,14 @@ package com.appearnetworks.aiq.persistence;
 import org.springframework.http.MediaType;
 
 public final class StoredAttachment {
-    private final MediaType contentType;
-    private final byte[] data;
-    private final long revision;
+    public final MediaType contentType;
+    public final byte[] data;
+    public final long revision;
 
     public StoredAttachment(MediaType contentType, byte[] data, long revision) {
         this.contentType = contentType;
         this.data = data;
         this.revision = revision;
-    }
-
-    public MediaType getContentType() {
-        return contentType;
-    }
-
-    public byte[] getData() {
-        return data;
-    }
-
-    public long getRevision() {
-        return revision;
     }
 
     @Override
