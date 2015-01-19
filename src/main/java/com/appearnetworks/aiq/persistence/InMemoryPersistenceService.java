@@ -1,11 +1,16 @@
 package com.appearnetworks.aiq.persistence;
 
+import com.appearnetworks.aiq.integrationframework.integration.DocumentAndAttachmentRevision;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
 import com.appearnetworks.aiq.integrationframework.integration.UpdateException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,6 +22,7 @@ public class InMemoryPersistenceService implements PersistenceService {
     private static final String REV = "_rev";
 
     private final ConcurrentMap<String, Document> documents = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, StoredAttachment> attachments = new ConcurrentHashMap<>();
 
     @Override
     public Collection<DocumentReference> list() {
@@ -79,5 +85,61 @@ public class InMemoryPersistenceService implements PersistenceService {
             return;
         else
             throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
+    }
+
+    @Override
+    public DocumentAndAttachmentRevision insertAttachment(String docId, String name, InputStream data, MediaType contentType, long contentLength) throws UpdateException, IOException {
+        Document document = documents.get(docId);
+        if (document == null) {
+            throw new UpdateException(HttpStatus.NOT_FOUND);
+        } else {
+            long initialRevision = 1;
+            StoredAttachment existingAttachment = attachments.putIfAbsent(
+                    document.get_id() + ':' + name,
+                    new StoredAttachment(contentType, FileCopyUtils.copyToByteArray(data), initialRevision)
+            );
+            if (existingAttachment == null) {
+                return new DocumentAndAttachmentRevision(document.get_rev()+ 1, initialRevision);
+            } else {
+                throw new UpdateException(HttpStatus.CONFLICT);
+            }
+        }
+    }
+
+    @Override
+    public DocumentAndAttachmentRevision updateAttachment(String docId, String name, InputStream data, long revision, MediaType contentType, long contentLength) throws UpdateException, IOException {
+        Document document = documents.get(docId);
+        if (document == null) {
+            throw new UpdateException(HttpStatus.NOT_FOUND);
+        } else {
+            long newRevision = revision + 1;
+            boolean wasReplaced = attachments.replace(
+                    document.get_id() + ':' + name,
+                    new StoredAttachment(null, null, revision),
+                    new StoredAttachment(contentType, FileCopyUtils.copyToByteArray(data), newRevision)
+            );
+            if (wasReplaced)
+                return new DocumentAndAttachmentRevision(document.get_rev()+ 1, newRevision);
+            else
+                throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
+        }
+    }
+
+    @Override
+    public long deleteAttachment(String docId, String name, long revision) throws UpdateException {
+        Document document = documents.get(docId);
+        if (document == null) {
+            throw new UpdateException(HttpStatus.NOT_FOUND);
+        } else {
+            boolean wasRemoved = attachments.remove(
+                    document.get_id() + ':' + name,
+                    new StoredAttachment(null, null, revision)
+            );
+
+            if (wasRemoved)
+                return document.get_rev()+1;
+            else
+                throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
+        }
     }
 }
