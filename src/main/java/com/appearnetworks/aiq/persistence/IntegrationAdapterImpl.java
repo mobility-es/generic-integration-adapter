@@ -1,5 +1,6 @@
 package com.appearnetworks.aiq.persistence;
 
+import com.appearnetworks.aiq.integrationframework.integration.Attachment;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentAndAttachmentRevision;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
 import com.appearnetworks.aiq.integrationframework.integration.IntegrationAdapterBase;
@@ -30,6 +31,11 @@ public class IntegrationAdapterImpl extends IntegrationAdapterBase {
     @Override
     public Object retrieveDocument(String docType, String docId) {
         return persistenceService.retrieve(docId);
+    }
+
+    @Override
+    public Attachment retrieveAttachment(String docType, String docId, String name) {
+        return persistenceService.retrieveAttachment(docType, docId, name);
     }
 
     @Override

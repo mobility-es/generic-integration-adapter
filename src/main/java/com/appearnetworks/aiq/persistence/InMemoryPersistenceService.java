@@ -1,5 +1,6 @@
 package com.appearnetworks.aiq.persistence;
 
+import com.appearnetworks.aiq.integrationframework.integration.Attachment;
 import com.appearnetworks.aiq.integrationframework.integration.AttachmentReference;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentAndAttachmentRevision;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.FileCopyUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -61,8 +63,8 @@ public class InMemoryPersistenceService implements PersistenceService {
         body.put(REV, initialRevision);
 
         StoredDocument existingDocument = documents.putIfAbsent(
-            docRef._id,
-            new StoredDocument(docRef._id, docRef._type, initialRevision, body));
+                docRef._id,
+                new StoredDocument(docRef._id, docRef._type, initialRevision, body));
 
         if (existingDocument == null) {
             return initialRevision;
@@ -78,9 +80,9 @@ public class InMemoryPersistenceService implements PersistenceService {
         body.put(REV, updatedRevision);
 
         boolean wasReplaced = documents.replace(
-            docRef._id,
-            new StoredDocument(docRef._id, docRef._type, docRef._rev, null),
-            new StoredDocument(docRef._id, docRef._type, updatedRevision, body));
+                docRef._id,
+                new StoredDocument(docRef._id, docRef._type, docRef._rev, null),
+                new StoredDocument(docRef._id, docRef._type, updatedRevision, body));
 
         if (wasReplaced)
             return updatedRevision;
@@ -91,13 +93,28 @@ public class InMemoryPersistenceService implements PersistenceService {
     @Override
     public void delete(DocumentReference docRef) throws UpdateException {
         boolean wasRemoved = documents.remove(
-            docRef._id,
-            new StoredDocument(docRef._id, docRef._type, docRef._rev, null));
+                docRef._id,
+                new StoredDocument(docRef._id, docRef._type, docRef._rev, null));
 
         if (wasRemoved)
             return;
         else
             throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
+    }
+
+    @Override
+    public Attachment retrieveAttachment(String docType, String docId, String name) {
+        StoredDocument document = documents.get(docId);
+        if (document == null) {
+            return null;
+        }
+
+        StoredAttachment attachment = document.attachments.get(docId);
+        if (attachment == null) {
+            return null;
+        }
+
+        return new Attachment(attachment.contentType, attachment.data.length, new ByteArrayInputStream(attachment.data), attachment.revision);
     }
 
     @Override

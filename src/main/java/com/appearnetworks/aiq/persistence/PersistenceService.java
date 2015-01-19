@@ -1,5 +1,6 @@
 package com.appearnetworks.aiq.persistence;
 
+import com.appearnetworks.aiq.integrationframework.integration.Attachment;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentAndAttachmentRevision;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
 import com.appearnetworks.aiq.integrationframework.integration.UpdateException;
@@ -21,6 +22,8 @@ interface PersistenceService {
     long update(DocumentReference docRef, ObjectNode doc) throws UpdateException;
 
     void delete(DocumentReference docRef) throws UpdateException;
+
+    Attachment retrieveAttachment(String docType, String docId, String name);
 
     DocumentAndAttachmentRevision insertAttachment(String docId, String name, InputStream data, MediaType contentType, long contentLength) throws UpdateException, IOException;
 
