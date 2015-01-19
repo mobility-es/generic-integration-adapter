@@ -262,6 +262,7 @@ public class InMemoryPersistenceServiceTest {
 
         DocumentAndAttachmentRevision documentAndAttachmentRevision = persistenceService.insertAttachment(
                 DOC_ID, NAME, new ByteArrayInputStream(ATTACHMENT_DATA), ATTACHMENT_CONTENT_TYPE, ATTACHMENT_DATA.length);
+        persistenceService.retrieve(DOC_ID);
 
         long documentRev = persistenceService.deleteAttachment(DOC_ID, NAME, documentAndAttachmentRevision.attachmentRev);
         assertTrue(documentRev > documentAndAttachmentRevision.documentRev);

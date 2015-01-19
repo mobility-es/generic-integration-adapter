@@ -53,6 +53,8 @@ public class InMemoryPersistenceService implements PersistenceService {
         }
         if (attachments.size() > 0) {
             doc.body.put(ATTACHMENTS, attachments);
+        } else {
+            doc.body.remove(ATTACHMENTS);
         }
 
         return doc.body;
