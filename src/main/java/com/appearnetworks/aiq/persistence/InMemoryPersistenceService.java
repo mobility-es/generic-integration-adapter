@@ -45,6 +45,8 @@ public class InMemoryPersistenceService implements PersistenceService {
         StoredDocument doc = documents.get(docId);
         if (doc == null) return null;
 
+        doc.body.put(REV, doc.get_rev());
+
         ObjectNode attachments = mapper.createObjectNode();
         for (Map.Entry<String, StoredAttachment> entry : doc.attachments.entrySet()) {
             attachments.put(entry.getKey(), mapper.valueToTree(new AttachmentReference(entry.getValue().revision, entry.getValue().contentType)));
@@ -60,8 +62,6 @@ public class InMemoryPersistenceService implements PersistenceService {
     public long insert(DocumentReference docRef, ObjectNode body) throws UpdateException {
         long initialRevision = 1;
 
-        body.put(REV, initialRevision);
-
         StoredDocument existingDocument = documents.putIfAbsent(
                 docRef._id,
                 new StoredDocument(docRef._id, docRef._type, initialRevision, body));
@@ -76,8 +76,6 @@ public class InMemoryPersistenceService implements PersistenceService {
     @Override
     public long update(DocumentReference docRef, ObjectNode body) throws UpdateException {
         long updatedRevision = docRef._rev + 1;
-
-        body.put(REV, updatedRevision);
 
         boolean wasReplaced = documents.replace(
                 docRef._id,

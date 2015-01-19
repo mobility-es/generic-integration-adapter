@@ -156,7 +156,9 @@ public class InMemoryPersistenceServiceTest {
         assertTrue(documentAndAttachmentRevision.documentRev > documentRevision);
         assertTrue(documentAndAttachmentRevision.attachmentRev > 0);
 
-        JsonNode attachments = persistenceService.retrieve(DOC_ID).get(ATTACHMENTS);
+        ObjectNode retrievedDocument = persistenceService.retrieve(DOC_ID);
+        assertEquals(documentAndAttachmentRevision.documentRev, retrievedDocument.get(REV).longValue());
+        JsonNode attachments = retrievedDocument.get(ATTACHMENTS);
         JsonNode attachment = attachments.get(NAME);
         assertEquals(documentAndAttachmentRevision.attachmentRev, attachment.get(REV).longValue());
         assertEquals(ATTACHMENT_CONTENT_TYPE.toString(), attachment.get(CONTENT_TYPE).textValue());
@@ -204,7 +206,9 @@ public class InMemoryPersistenceServiceTest {
         assertTrue(documentAndAttachmentRevision2.documentRev > documentAndAttachmentRevision.documentRev);
         assertTrue(documentAndAttachmentRevision2.attachmentRev > documentAndAttachmentRevision.attachmentRev);
 
-        JsonNode attachments = persistenceService.retrieve(DOC_ID).get(ATTACHMENTS);
+        ObjectNode retrievedDocument = persistenceService.retrieve(DOC_ID);
+        assertEquals(documentAndAttachmentRevision2.documentRev, retrievedDocument.get(REV).longValue());
+        JsonNode attachments = retrievedDocument.get(ATTACHMENTS);
         JsonNode attachment = attachments.get(NAME);
         assertEquals(documentAndAttachmentRevision2.attachmentRev, attachment.get(REV).longValue());
         assertEquals(ATTACHMENT_CONTENT_TYPE.toString(), attachment.get(CONTENT_TYPE).textValue());
@@ -262,7 +266,9 @@ public class InMemoryPersistenceServiceTest {
         long documentRev = persistenceService.deleteAttachment(DOC_ID, NAME, documentAndAttachmentRevision.attachmentRev);
         assertTrue(documentRev > documentAndAttachmentRevision.documentRev);
 
-        assertNull(persistenceService.retrieve(DOC_ID).get(ATTACHMENTS));
+        ObjectNode retrievedDocument = persistenceService.retrieve(DOC_ID);
+        assertEquals(documentRev, retrievedDocument.get(REV).longValue());
+        assertNull(retrievedDocument.get(ATTACHMENTS));
 
         assertNull(persistenceService.retrieveAttachment(DOC_ID, NAME));
     }
