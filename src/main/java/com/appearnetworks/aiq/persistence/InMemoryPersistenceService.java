@@ -103,13 +103,13 @@ public class InMemoryPersistenceService implements PersistenceService {
     }
 
     @Override
-    public Attachment retrieveAttachment(String docType, String docId, String name) {
+    public Attachment retrieveAttachment(String docId, String name) {
         StoredDocument document = documents.get(docId);
         if (document == null) {
             return null;
         }
 
-        StoredAttachment attachment = document.attachments.get(docId);
+        StoredAttachment attachment = document.attachments.get(name);
         if (attachment == null) {
             return null;
         }

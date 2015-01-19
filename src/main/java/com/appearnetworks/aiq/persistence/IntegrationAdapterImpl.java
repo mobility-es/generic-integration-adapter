@@ -35,7 +35,7 @@ public class IntegrationAdapterImpl extends IntegrationAdapterBase {
 
     @Override
     public Attachment retrieveAttachment(String docType, String docId, String name) {
-        return persistenceService.retrieveAttachment(docType, docId, name);
+        return persistenceService.retrieveAttachment(docId, name);
     }
 
     @Override
