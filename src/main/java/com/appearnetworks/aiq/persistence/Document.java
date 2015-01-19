@@ -1,12 +1,15 @@
 package com.appearnetworks.aiq.persistence;
 
 import com.appearnetworks.aiq.integrationframework.integration.BusinessDocument;
-import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public final class Document extends BusinessDocument {
 
     private final ObjectNode body;
+    public final ConcurrentMap<String, StoredAttachment> attachments = new ConcurrentHashMap<>();
 
     public Document(String _id, String _type, long _rev, ObjectNode body) {
         super(_id, _type, _rev);
@@ -15,6 +18,10 @@ public final class Document extends BusinessDocument {
 
     public ObjectNode getBody() {
         return body;
+    }
+
+    public long bumpRevision() {
+        return ++_rev;
     }
 
     @Override

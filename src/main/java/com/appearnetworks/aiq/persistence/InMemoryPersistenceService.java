@@ -1,8 +1,10 @@
 package com.appearnetworks.aiq.persistence;
 
+import com.appearnetworks.aiq.integrationframework.integration.AttachmentReference;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentAndAttachmentRevision;
 import com.appearnetworks.aiq.integrationframework.integration.DocumentReference;
 import com.appearnetworks.aiq.integrationframework.integration.UpdateException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,16 +15,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Repository
 public class InMemoryPersistenceService implements PersistenceService {
 
+    private static final String ATTACHMENTS = "_attachments";
     private static final String REV = "_rev";
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private final ConcurrentMap<String, Document> documents = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, StoredAttachment> attachments = new ConcurrentHashMap<>();
 
     @Override
     public Collection<DocumentReference> list() {
@@ -36,9 +41,17 @@ public class InMemoryPersistenceService implements PersistenceService {
     @Override
     public ObjectNode retrieve(String docId) {
         Document doc = documents.get(docId);
-        return (doc != null)
-            ? doc.getBody()
-            : null;
+        if (doc == null) return null;
+
+        ObjectNode attachments = mapper.createObjectNode();
+        for (Map.Entry<String, StoredAttachment> entry : doc.attachments.entrySet()) {
+            attachments.put(entry.getKey(), mapper.valueToTree(new AttachmentReference(entry.getValue().getRevision(), entry.getValue().getContentType())));
+        }
+        if (attachments.size() > 0) {
+            doc.getBody().put(ATTACHMENTS, attachments);
+        }
+
+        return doc.getBody();
     }
 
     @Override
@@ -94,12 +107,12 @@ public class InMemoryPersistenceService implements PersistenceService {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {
             long initialRevision = 1;
-            StoredAttachment existingAttachment = attachments.putIfAbsent(
-                    document.get_id() + ':' + name,
+            StoredAttachment existingAttachment = document.attachments.putIfAbsent(
+                    name,
                     new StoredAttachment(contentType, FileCopyUtils.copyToByteArray(data), initialRevision)
             );
             if (existingAttachment == null) {
-                return new DocumentAndAttachmentRevision(document.get_rev()+ 1, initialRevision);
+                return new DocumentAndAttachmentRevision(document.bumpRevision(), initialRevision);
             } else {
                 throw new UpdateException(HttpStatus.CONFLICT);
             }
@@ -113,13 +126,13 @@ public class InMemoryPersistenceService implements PersistenceService {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {
             long newRevision = revision + 1;
-            boolean wasReplaced = attachments.replace(
-                    document.get_id() + ':' + name,
+            boolean wasReplaced = document.attachments.replace(
+                    name,
                     new StoredAttachment(null, null, revision),
                     new StoredAttachment(contentType, FileCopyUtils.copyToByteArray(data), newRevision)
             );
             if (wasReplaced)
-                return new DocumentAndAttachmentRevision(document.get_rev()+ 1, newRevision);
+                return new DocumentAndAttachmentRevision(document.bumpRevision(), newRevision);
             else
                 throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
         }
@@ -131,13 +144,13 @@ public class InMemoryPersistenceService implements PersistenceService {
         if (document == null) {
             throw new UpdateException(HttpStatus.NOT_FOUND);
         } else {
-            boolean wasRemoved = attachments.remove(
-                    document.get_id() + ':' + name,
+            boolean wasRemoved = document.attachments.remove(
+                    name,
                     new StoredAttachment(null, null, revision)
             );
 
             if (wasRemoved)
-                return document.get_rev()+1;
+                return document.bumpRevision();
             else
                 throw new UpdateException(HttpStatus.PRECONDITION_FAILED);
         }
