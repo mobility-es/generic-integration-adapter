@@ -17,9 +17,9 @@ Installation
 
 1. Clone this Git repository.
 
-2. Edit the file `src/main/aiq.properties` and set your orgname, username and password.
+2. Edit the file `src/main/aiq.properties` and set your orgname, solution, username and password.
 
 3. Run the command:
 ```
-mvn aiq:ia.deploy
+mvn jetty:run
 ```
